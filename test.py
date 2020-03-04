@@ -48,10 +48,22 @@ def copy_to_other_bucket(src, des, key):
 def resize_image(name):
     size = 500, 500
     bucket = s3.Bucket(name)
+    in_mem_file = BytesIO()
 
     for obj in bucket.objects.all():
         ext = pathlib.Path(obj.key).suffix.split('.')[1]
         im = Image.open(obj.key)
+
         im.thumbnail(size, Image.ANTIALIAS)
-        im.save('resized_' + obj.key)
-        im.show()
+        
+        im.save(in_mem_file, format=im.format)
+        in_mem_file.seek(0)
+        
+        client = boto3.client('s3')
+        response = client.put_object(
+            Body=in_mem_file,
+            Bucket='resizedimagebucket0099',
+            Key='resized_' + obj.key
+        )
+        print(response)
+        # im.show()
