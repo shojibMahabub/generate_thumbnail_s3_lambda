@@ -41,9 +41,10 @@ def copy_to_other_bucket(src, des, key):
             'Key': key
         }
         bucket = s3.Bucket(des)
-        bucket.copy(f'upload/{key}', f'upload/{key}')
+        bucket.copy(copy_source, key)
     except Exception as e:
         print(e)
+
 
 def resize_image(src_bucket, des_bucket):
     size = 500, 500
@@ -68,10 +69,12 @@ def resize_image(src_bucket, des_bucket):
 
 def lambda_handler(event, context):
     bucket = s3.Bucket('myimagebucket0099')
+
+    for obj in bucket.objects.all():
+        copy_to_other_bucket(bucket, 'backupimagebucket0099', obj.key)
     
     resize_image(bucket.name, 'resizedimagebucket0099')
 
-    for obj in bucket.objects.all():
-        copy_to_other_bucket(bucket, 'backupimagebucket', obj.key)
     
     print(bucket)
+
