@@ -1,0 +1,1 @@
+# Lambda function to create thumbnail and backup from s3 image [event driven]
