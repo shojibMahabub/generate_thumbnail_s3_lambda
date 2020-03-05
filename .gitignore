@@ -2,5 +2,3 @@
 env
 testimage
 *.jpg
-lambda.zip
-test.py
