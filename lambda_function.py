@@ -45,15 +45,13 @@ def copy_to_other_bucket(src, des, key):
     except Exception as e:
         print(e)
 
-
 def resize_image(src_bucket, des_bucket):
     size = 500, 500
     bucket = s3.Bucket(src_bucket)
     in_mem_file = BytesIO()
     client = boto3.client('s3')
 
-    for obj in client.list_objects_v2(Bucket=bucket.name, Prefix='upload/'):
-        ext = pathlib.Path(obj.key).suffix.split('.')[1]
+    for obj in bucket.objects.all():
         file_byte_string = client.get_object(Bucket=src_bucket, Key=obj.key)['Body'].read()
         im = Image.open(BytesIO(file_byte_string))
 
