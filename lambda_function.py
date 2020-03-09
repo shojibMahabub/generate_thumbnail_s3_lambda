@@ -5,6 +5,7 @@ import pathlib
 from io import BytesIO
 
 s3 = boto3.resource('s3')
+client = boto3.client('s3')
 
 def delete_this_bucket(name):
     bucket = s3.Bucket(name)
@@ -51,30 +52,37 @@ def resize_image(src_bucket, des_bucket):
     bucket = s3.Bucket(src_bucket)
     in_mem_file = BytesIO()
     client = boto3.client('s3')
-
-    for obj in bucket.objects.all():
-        file_byte_string = client.get_object(Bucket=src_bucket, Key=obj.key)['Body'].read()
-        im = Image.open(BytesIO(file_byte_string))
-
-        im.thumbnail(size, Image.ANTIALIAS)
-        # ISSUE : https://stackoverflow.com/questions/4228530/pil-thumbnail-is-rotating-my-image
-        im.save(in_mem_file, format=im.format)
-        in_mem_file.seek(0)
-        
-        response = client.put_object(
-            Body=in_mem_file,
-            Bucket=des_bucket,
-            Key='resized_' + obj.key
-        )
-
-def lambda_handler(event, context):
-    bucket = s3.Bucket('myimagebucket0099')
-
-    for obj in bucket.objects.all():
-        copy_to_other_bucket(bucket, 'backupimagebucket0099', obj.key)
+    response = client.list_objects_v2(Bucket=src_bucket, Prefix='uploads/')
     
-    resize_image(bucket.name, 'resizedimagebucket0099')
+    for obj in response['Contents']:
+        print(obj['Key'])
+        file_byte_string = client.get_object(Bucket=src_bucket, Key=obj['Key'])
+        try:
+            im = Image.open(BytesIO(file_byte_string['Body'].read()))    
+            im.thumbnail(size, Image.ANTIALIAS)
+            
+            # ISSUE : https://stackoverflow.com/questions/4228530/pil-thumbnail-is-rotating-my-image
+            im.save(in_mem_file, format=im.format)
+            in_mem_file.seek(0)
+            
+            response = client.put_object(
+                Body=in_mem_file,
+                Bucket=des_bucket,
+                Key=obj['Key']
+            )
+        except Exception as e:
+            pass
+
+def lambda_handler():
+    client = boto3.client('s3')
+    bucket = 'myimagebucket0099'
+
+    response = client.list_objects_v2(Bucket=bucket, Prefix='uploads/')
+
+    for obj in response['Contents']:
+        copy_to_other_bucket(bucket, 'backupimagebucket0099', obj['Key'])
+    
+    resize_image(bucket, 'resizedimagebucket0099')
 
     
     print(bucket)
-
