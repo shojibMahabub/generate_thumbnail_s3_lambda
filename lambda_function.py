@@ -4,10 +4,22 @@ from PIL import Image
 import pathlib
 from io import BytesIO
 
-s3 = boto3.resource('s3')
+# configuration
+thumbimagebucket = 'resizedimagebucket0099'
+backupimagebucket = 'backupimagebucket0099'
+mainimagebucket = 'myimagebucket0099'
 client = boto3.client('s3')
+s3 = boto3.resource('s3')
 
 def delete_this_bucket(name):
+    '''
+        def     delete_this_bucket()
+        param   bucket_name
+
+        This function deletes all object at first by looping through.
+        As it is required by AWS programmatic access cant delete the
+        whole bucket at once.
+    '''
     bucket = s3.Bucket(name)
     for key in bucket.objects.all():
         try:
@@ -17,6 +29,12 @@ def delete_this_bucket(name):
             print("SOMETHING IS BROKEN !!")
 
 def create_this_bucket(name, location):
+    '''
+        def create_this_bucket()
+        param bucket_name, bucket_location
+
+        this function will create bucket from a given location and name
+    '''
     try:
         s3.create_bucket(
             Bucket=name,
@@ -28,6 +46,12 @@ def create_this_bucket(name, location):
         print(e)
 
 def upload_test_images(name):
+    '''
+        def upload_test_images()
+        param bucket_name
+
+        this function responsible for uploading images in bucket
+    '''
     for each in os.listdir('./testimage'):
         try:
             file = os.path.abspath(each)
@@ -71,18 +95,13 @@ def resize_image(src_bucket, des_bucket):
                 Key=obj['Key']
             )
         except Exception as e:
+            print(e)
             pass
 
-def lambda_handler():
-    client = boto3.client('s3')
-    bucket = 'myimagebucket0099'
-
-    response = client.list_objects_v2(Bucket=bucket, Prefix='uploads/')
+def lambda_handler(event, context):
+    response = client.list_objects_v2(Bucket=mainimagebucket, Prefix='uploads/')
 
     for obj in response['Contents']:
-        copy_to_other_bucket(bucket, 'backupimagebucket0099', obj['Key'])
+        copy_to_other_bucket(mainimagebucket, backupimagebucket, obj['Key'])
     
-    resize_image(bucket, 'resizedimagebucket0099')
-
-    
-    print(bucket)
+    resize_image(mainimagebucket, thumbimagebucket)
